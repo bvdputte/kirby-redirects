@@ -16,6 +16,20 @@ But it also adds functionality that automatically creates redirects when slug ch
 
 ## ...
 
+## Logic diagrams
+
+### Redirect flow
+
+```mermaid
+graph TD
+    A[No match found in Kirby's router] -->|route:after| B
+    B{Has match in autoredirects}
+    B -->|Yes| C[Redirect to first match]
+    B -->|No| D{Has match in static redirects}
+    D -->|Yes| E[Redirect to first match]
+    D -->|No| F[Continue to next route - 404]
+```
+
 
 ### Configurable options
 
