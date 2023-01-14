@@ -1,7 +1,7 @@
 <?php
 
-require __DIR__ . DS . "src" . DS . "Redirects.php";
-require __DIR__ . DS . "src" . DS . "autoRedirects.php";
+require __DIR__ . DS . "classes" . DS . "Redirects.php";
+require __DIR__ . DS . "classes" . DS . "autoRedirects.php";
 
 // For composer
 @include_once __DIR__ . '/vendor/autoload.php';
@@ -21,8 +21,6 @@ if (
         'is not compatible with Kirby ' . $kirbyVersion
     );
 }
-
-// https://forum.getkirby.com/t/a-minimalist-redirect-solution-that-intercepts-404-errors/24007
 
 Kirby::plugin('bvdputte/redirects', [
     'options' => [
@@ -44,20 +42,27 @@ Kirby::plugin('bvdputte/redirects', [
             // Add log for failed redirects?
         },
         'page.changeSlug:after' => function ($newPage, $oldPage) {
+            $redirector = bvdputte\redirects\AutoRedirects::singleton();
+
             // Do not manage redirects for drafts
             if($oldPage->status() != "draft") {
-                // Add updated slug to redirects file
+                // Add to redirects, or update the $toId when $from is already in redirects
                 if (kirby()->multilang()) {
-                    $from = kirby()->language()->code() . '/' . $oldPage->uri();
+                    $langCode = kirby()->language()->code();
+                    $from = $langCode . '/' . $oldPage->uri();
+                    $redirector->addRedirect(
+                        from: $from,
+                        destId: $newPage->uuid()->id(),
+                        code: option('bvdputte.redirects.autoredirectsDefaultCode'),
+                        langCode: $langCode
+                    );
                 } else {
-                    $from = $oldPage->uri();
+                    $redirector->addRedirect(
+                        from: $oldPage->uri(),
+                        destId: $newPage->uuid()->id(),
+                        code: option('bvdputte.redirects.autoredirectsDefaultCode')
+                    );
                 }
-
-                bvdputte\redirects\AutoRedirects::singleton()->add(
-                    from: $from,
-                    id: $newPage->uuid()->id(),
-                    code: option('bvdputte.redirects.autoredirectsDefaultCode')
-                );
             }
         },
         'page.changeSlug:before' => function ($page, $slug, $languageCode) {
@@ -68,17 +73,26 @@ Kirby::plugin('bvdputte/redirects', [
         },
         'page.changeStatus:after' => function ($newPage, $oldPage) {
             // When page status changes back in "draft", remove all redirects pointing "to" this page
+            $redirector = bvdputte\redirects\AutoRedirects::singleton();
             if($newPage->status() == "draft") {
                 // Remove all redirects pointing "to" this page
-                bvdputte\redirects\AutoRedirects::singleton()->delete(id: $newPage->uuid()->id());
+                $redirects = $redirector->getAllForDestination($newPage->uuid()->id());
+                foreach($redirects as $redirectId => $redirect) {
+                    $redirector->deleteRedirect($redirectId);
+                }
             }
         },
         'page.delete:after' => function ($status, $page) {
             // Remove all redirects pointing "to" this page
-            bvdputte\redirects\AutoRedirects::singleton()->delete(id: $page->uuid()->id());
+            $redirector = bvdputte\redirects\AutoRedirects::singleton();
+            $redirects = $redirector->getAllForDestination($page->uuid()->id());
+            foreach($redirects as $redirectId => $redirect) {
+                $redirector->deleteRedirect($redirectId);
+            }
         },
         'page.create:before' => function ($page, $input) {
             // Avoid creating a page when there is already a redirect to its slug
+            $redirector = bvdputte\redirects\AutoRedirects::singleton();
 
             // Handle multilang setups
             if (kirby()->multilang()) {
@@ -86,14 +100,17 @@ Kirby::plugin('bvdputte/redirects', [
                 $from = kirby()->defaultLanguage()->code() . '/' . $page->uri();
 
                 // Check if there is a an existing redirect for this in the default language
-                $results = bvdputte\redirects\AutoRedirects::singleton()->getAllFrom($from);
+                $results = $redirector->getAllForFrom($from);
                 if(! empty($results)) {
-                    $toPageId = $results[0][1];
-                    if ($toPage = page('page://' . $toPageId)) {
+                    $destPageId = $results[array_key_first($results)]['destId'];
+                    if ($destPage = page('page://' . $destPageId)) {
                         throw new LogicException(
                             'There is already a redirect pointing to this URL at ' .
-                            kirby()->defaultLanguage()->code() . '/' . $toPage->uri()
+                            kirby()->defaultLanguage()->code() . '/' . $destPage->uri()
                         );
+                    } else {
+                        // Continue, but remove stale redirect
+                        $redirector->deleteRedirect(array_key_first($results));
                     }
                 }
 
@@ -102,20 +119,17 @@ Kirby::plugin('bvdputte/redirects', [
                 $from = $langCode . '/' . $page->uri();
 
                 // Check if there is a an existing redirect for this in the current language
-                $results = bvdputte\redirects\AutoRedirects::singleton()->getAllFrom($from);
+                $results = $redirector->getAllForFrom($from);
                 if(! empty($results)) {
-                    $toPageId = $results[0][1];
-                    if ($toPage = page('page://' . $toPageId)) {
+                    $destPageId = $results[array_key_first($results)]['destId'];
+                    if ($destPage = page('page://' . $destPageId)) {
                         throw new LogicException(
                             'There is already a redirect pointing to this URL at ' .
-                            $langCode . '/' . $toPage->uri($langCode)
+                            $langCode . '/' . $destPage->uri($langCode)
                         );
                     } else {
                         // Continue, but remove stale redirect
-                        bvdputte\redirects\AutoRedirects::singleton()->delete(
-                            from: $from,
-                            id: $toPageId
-                        );
+                        $redirector->deleteRedirect(array_key_first($results));
                     }
                 }
             } else {
@@ -123,23 +137,27 @@ Kirby::plugin('bvdputte/redirects', [
                 $from = $page->uri();
 
                 // Check if there is a an existing redirect for this URI
-                $results = bvdputte\redirects\AutoRedirects::singleton()->getAllFrom($from);
+                $results = $redirector->getAllForFrom($from);
                 if(! empty($results)) {
-                    $toPageId = $results[0][1];
-                    if ($toPage = page('page://' . $toPageId)) {
+                    $destPageId = $results[array_key_first($results)]['destId'];
+                    if ($destPage = page('page://' . $destPageId)) {
                             throw new LogicException(
                                 'There is already a redirect pointing to this URL at ' .
-                                $toPage->uri()
+                                $destPage->uri()
                             );
                     } else {
                         // Continue, but remove stale redirect
-                        bvdputte\redirects\AutoRedirects::singleton()->delete(
-                            from: $from,
-                            id: $toPageId
-                        );
+                        $redirector->deleteRedirect(array_key_first($results));
                     }
                 }
             }
         }
+    ],
+    'fields' => [
+        'redirects' => [
+            'props' => [
+                'multilang' => kirby()->multilang(),
+            ]
+        ]
     ]
 ]);

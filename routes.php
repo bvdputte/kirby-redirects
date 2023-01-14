@@ -2,26 +2,38 @@
 
 return [
     [
-        // Get all autoredirects for a given page ID
-        'pattern' => 'kirbyredirects/allForId/(:any)',
-        'action' => function($pageId) {
+        // Get all autoredirects
+        'pattern' => 'kirbyredirects/all',
+        'action' => function() {
             // Restrict unauthenticated access
             if (!kirby()->user()) go('error', 404);
 
-            ray(bvdputte\redirects\AutoRedirects::singleton()->getAllTo($pageId));
-            die;
+            $redirector = bvdputte\redirects\AutoRedirects::singleton();
+
+            $redirects = $redirector->getAll();
+            $redirects = $redirector->appendDestinationUri($redirects);
+
+            return $redirects;
         }
     ],
     [
-        // Delete the redirect for a given "from" slug & page ID
-        'pattern' => 'kirbyredirects/delete/(:any)/(:any)',
-        'action' => function($from, $pageId) {
+        // Delete the redirect for a given redirectID, passed via the request body
+        'pattern' => 'kirbyredirects/delete',
+        'action' => function() {
             // Restrict unauthenticated access
             if (!kirby()->user()) go('error', 404);
 
-            // Slashes are replaced in $from by pipes ("%7C")
-            ray(bvdputte\redirects\AutoRedirects::singleton()->delete(str_replace('%7C', '/', $from), $pageId));
-            die;
-        }
-    ]
+            $request = kirby()->request()->body()->data();
+            $redirector = bvdputte\redirects\AutoRedirects::singleton();
+
+            $redirects = $redirector->deleteRedirect($request['redirectId']);
+            $redirects = $redirector->appendDestinationUri($redirects);
+
+            return [
+                'errors' => false,
+                'redirects' => $redirects
+            ];
+        },
+        'method' => 'DELETE'
+    ],
 ];
