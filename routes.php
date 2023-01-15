@@ -11,9 +11,8 @@ return [
             $redirector = bvdputte\redirects\AutoRedirects::singleton();
 
             $redirects = $redirector->getAll();
-            $redirects = $redirector->appendDestinationUri($redirects);
 
-            return $redirects;
+            return $redirector->formatForPanel($redirects);
         }
     ],
     [
@@ -27,11 +26,13 @@ return [
             $redirector = bvdputte\redirects\AutoRedirects::singleton();
 
             $redirects = $redirector->deleteRedirect($request['redirectId']);
-            $redirects = $redirector->appendDestinationUri($redirects);
+            if ($redirects == false) {
+                throw new LogicException('Redirect delete failed.');
+            }
 
             return [
                 'errors' => false,
-                'redirects' => $redirects
+                'redirects' => $redirector->formatForPanel($redirects)
             ];
         },
         'method' => 'DELETE'

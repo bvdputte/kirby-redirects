@@ -163,9 +163,10 @@ class AutoRedirects
         return $this->map();
     }
 
-    public function appendDestinationUri(array $redirects)
+    public function formatForPanel(array $redirects)
     {
-        $updatedRedirects = array_map(function($item) {
+        $redirectIds = array_keys($redirects);
+        $updatedRedirects = array_map(function($item, $id) {
             if ($toPage = page('page://' . $item['destId'])) {
                 if (
                     (kirby()->multilang()) &&
@@ -177,12 +178,13 @@ class AutoRedirects
                     $toUrl = $toPage->uri();
                 }
                 $item['to'] = $toUrl;
+                $item['redirectId'] = $id;
 
                 return $item;
             } else {
                 return false;
             }
-        }, $redirects);
+        }, $redirects, $redirectIds);
 
         return $updatedRedirects;
     }
