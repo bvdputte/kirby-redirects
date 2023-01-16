@@ -1,10 +1,19 @@
 # Kirby Redirects
 
 A Kirby 3 panel plugin to handle redirects in an opinionated way.
-This plugin allows you to add redirects manually, as you'ld do via a .htaccess file.
-But it also adds functionality that automatically creates redirects when slug changes happen in the panel.
 
-⚠️ _Caveat: Installing this plugin disables changing slugs for pages that have subpages!_
+It exists out of 2 components:
+1. static redirects: this allows you to add redirects manually in a json file, as you'ld do via a .htaccess file. Usually this happens when taking over an existing site, or do large architectural changes. Happens usually by devs/specialists, and are matched via regex.
+2. auto redirects: this keeps track of slug changes that happen by editors via the panel. These can be visualised in the panel via the `redirects` field. With this field, editors can also delete generated autoredirects.
+
+**Takeaways**
+
+- Autoredirects store an URI and match that to a page UUID. This way a page can have multiple historic URI's pointing towards it.
+- It's multilingual ready. (most of my sites are multilingual -- please test thoroughly on single lang setups)
+- It's designed to work in the background, and be an "assistant" for editors. But it also has a manual redirects setup for more experienced users (outside the panel), so all redirects are managed by the same plugin.
+- I haven't found a nice way to deal with slug updates for pages with subpages. Installing this plugin disables changing slugs for pages with subpages.
+- Moving pages with the [Move pages plugin](https://getkirby.com/plugins/owebstudio/move-pages) will also change slugs. These changes will **not** result in autoredirects.
+- Autoredirects are created with the 302 HTTP status code. IMO this is the safest default, since redirects can be removed and recycled for pages.
 
 ## Installation
 
@@ -14,7 +23,42 @@ But it also adds functionality that automatically creates redirects when slug ch
 
 ⚠️ _You'll need at least Kirby 3.8 to use this plugin._
 
-## ...
+### Setup
+
+#### Autoredirects
+
+Autoredirects are immediately active and will start recording slug changes. By default these will be stored in the `autoredirects.json` file in `site/config`.
+
+##### Redirects field
+
+Add the redirects field to the blueprints like this:
+
+```
+autoredirects:
+  type: redirects
+  label: Redirects
+```
+
+<img width="806" alt="CleanShot 2023-01-16 at 23 06 16@2x" src="https://user-images.githubusercontent.com/490505/212772501-1711ee0c-2f17-4b91-97f7-f19ea11c2516.png">
+
+#### Manual redirects
+
+Manual redirects can be added in `site/config/redirects.json` as a json array, e.g.:
+
+```json
+[
+  [
+    "^en/photography-old/(.*?)$",
+    "en/photography/$1",
+    302
+  ],
+  [
+    "^en/notes-old/(.*?)$",
+    "en/notes",
+    302
+  ]
+]
+```
 
 ## Logic diagrams
 
@@ -93,7 +137,7 @@ All of them are optional, below are the defaults.
 // String. Root of redirectsfile where the manual redirects live
 'redirectsFileRoot' => kirby()->root('config') . '/' . 'redirects.json',
 // String. Root of redirectsfile where to store the automatically generated redirects
-'autoredirectsFileRoot' => kirby()->root('config') . '/' . 'redirects-via-panel.json',
+'autoredirectsFileRoot' => kirby()->root('config') . '/' . 'autoredirects.json',
 // int. Default redirect HTTP status code
 'autoredirectsDefaultCode' => 302
 ```

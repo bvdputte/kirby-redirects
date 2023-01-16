@@ -25,7 +25,7 @@ if (
 Kirby::plugin('bvdputte/redirects', [
     'options' => [
         'redirectsFileRoot' => kirby()->root('config') . '/' . 'redirects.json',
-        'autoredirectsFileRoot' => kirby()->root('config') . '/' . 'redirects-via-panel.json',
+        'autoredirectsFileRoot' => kirby()->root('config') . '/' . 'autoredirects.json',
         'autoredirectsDefaultCode' => 302
     ],
     'routes' => require_once __DIR__ . '/routes.php',
