@@ -89,8 +89,8 @@ graph TD
     E{is draft}
     E -->|Yes| F[Do nothing]
     E -->|No| G{is multilang kirby}
-    F -->|Yes| H[Add localized redirect]
-    F -->|No| I[Add redirect]
+    F -->|Yes| H[Add localized autoredirect]
+    F -->|No| I[Add autoredirect]
 ```
 
 #### Change page status
@@ -99,7 +99,7 @@ graph TD
 graph TD
     A[Change page status] -->|page.changeStatus:after| B
     B{new status == draft}
-    B --> |Yes| C[Delete all existing redirects to this page]
+    B --> |Yes| C[Delete all existing autoredirect to this page]
     B --> |No| D[Do nothing]
 ```
 
@@ -109,15 +109,15 @@ graph TD
 graph TD
     A[Create new page] -->|page.create:before| B
     B{is Kirby multilang?}
-    B --> |No| C{Redirect to this URI exists?}
-    B --> |Yes| E{Redirect to this URI in default language exists?}
+    B --> |No| C{Autoredirect to this URI exists?}
+    B --> |Yes| E{Autoredirect to this URI in default language exists?}
     C --> |Yes| D{Destination page exists?}
     E -->|Yes| D
-    E -->|No| G{Redirect to this URI in current language exists?}
+    E -->|No| G{Autoredirect to this URI in current language exists?}
     G -->|Yes| D
     G -->|No| H[Create page]
     D --> |Yes| J[Throw error]
-    D --> |No| I[Delete redirect to that destination]
+    D --> |No| I[Delete autoredirect to that destination]
     I --> H
 ```
 
@@ -125,7 +125,7 @@ graph TD
 
 ```mermaid
 graph TD
-    A[Delete page] -->|page.delete:after| B[Delete all existing redirects to this page]
+    A[Delete page] -->|page.delete:after| B[Delete all existing autoredirects to this page]
 ```
 
 ### Configurable options
