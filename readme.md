@@ -89,8 +89,8 @@ graph TD
     E{is draft}
     E -->|Yes| F[Do nothing]
     E -->|No| G{is multilang kirby}
-    F -->|Yes| H[Add localized autoredirect]
-    F -->|No| I[Add autoredirect]
+    G -->|Yes| H[Add localized autoredirect]
+    G -->|No| I[Add autoredirect]
 ```
 
 #### Change page status
