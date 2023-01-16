@@ -41,6 +41,12 @@ Kirby::plugin('bvdputte/redirects', [
 
             // Add log for failed redirects?
         },
+        'page.changeSlug:before' => function ($page, $slug, $languageCode) {
+            // Do not allow change slug for pages with subpages
+            if ($page->childrenAndDrafts()->isNotEmpty()) {
+                throw new LogicException('The slug cannot be changed because the page has subpages');
+            }
+        },
         'page.changeSlug:after' => function ($newPage, $oldPage) {
             $redirector = bvdputte\redirects\AutoRedirects::singleton();
 
@@ -63,12 +69,6 @@ Kirby::plugin('bvdputte/redirects', [
                         code: option('bvdputte.redirects.autoredirectsDefaultCode')
                     );
                 }
-            }
-        },
-        'page.changeSlug:before' => function ($page, $slug, $languageCode) {
-            // Do not allow change slug for pages with subpages
-            if ($page->childrenAndDrafts()->isNotEmpty()) {
-                throw new LogicException('The slug cannot be changed because the page has subpages');
             }
         },
         'page.changeStatus:after' => function ($newPage, $oldPage) {
@@ -94,57 +94,31 @@ Kirby::plugin('bvdputte/redirects', [
             // Avoid creating a page when there is already a redirect to its slug
             $redirector = bvdputte\redirects\AutoRedirects::singleton();
 
-            // Handle multilang setups
+            $langPrefixes = [];
             if (kirby()->multilang()) {
                 // Page creations always occur in default language in Kirby
-                $from = kirby()->defaultLanguage()->code() . '/' . $page->uri();
+                $defaultLangCode = kirby()->defaultLanguage()->code();
+                $currentLangCode = kirby()->language()->code();
 
-                // Check if there is a an existing redirect for this in the default language
-                $results = $redirector->getAllForFrom($from);
-                if(! empty($results)) {
-                    $destPageId = $results[array_key_first($results)]['destId'];
-                    if ($destPage = page('page://' . $destPageId)) {
-                        throw new LogicException(
-                            'There is already a redirect pointing to this URL at ' .
-                            kirby()->defaultLanguage()->code() . '/' . $destPage->uri()
-                        );
-                    } else {
-                        // Continue, but remove stale redirect
-                        $redirector->deleteRedirect(array_key_first($results));
-                    }
-                }
-
-                // Continue in the current language
-                $langCode = kirby()->language()->code();
-                $from = $langCode . '/' . $page->uri();
-
-                // Check if there is a an existing redirect for this in the current language
-                $results = $redirector->getAllForFrom($from);
-                if(! empty($results)) {
-                    $destPageId = $results[array_key_first($results)]['destId'];
-                    if ($destPage = page('page://' . $destPageId)) {
-                        throw new LogicException(
-                            'There is already a redirect pointing to this URL at ' .
-                            $langCode . '/' . $destPage->uri($langCode)
-                        );
-                    } else {
-                        // Continue, but remove stale redirect
-                        $redirector->deleteRedirect(array_key_first($results));
-                    }
+                $langPrefixes[] = $defaultLangCode . '/';
+                // Also add current language
+                if ($defaultLangCode != $currentLangCode) {
+                    $langPrefixes[] = $currentLangCode . '/';
                 }
             } else {
-                // Non-multilang setup
-                $from = $page->uri();
+                $langPrefixes[] = "";
+            }
 
+            foreach($langPrefixes as $langPrefix) {
                 // Check if there is a an existing redirect for this URI
-                $results = $redirector->getAllForFrom($from);
+                $results = $redirector->getAllForFrom($langPrefix . $page->uri());
                 if(! empty($results)) {
-                    $destPageId = $results[array_key_first($results)]['destId'];
+                    $firstResult = $results[array_key_first($results)];
+                    $destPageId = $firstResult['destId'];
                     if ($destPage = page('page://' . $destPageId)) {
-                            throw new LogicException(
-                                'There is already a redirect pointing to this URL at ' .
-                                $destPage->uri()
-                            );
+                        $destUri = $langPrefix . $destPage->uri();
+                        // Do not allow creation of a page with expected slug when there already exists a redirect to it
+                        throw new LogicException('There is already a redirect pointing to this URL at ' . $destUri);
                     } else {
                         // Continue, but remove stale redirect
                         $redirector->deleteRedirect(array_key_first($results));

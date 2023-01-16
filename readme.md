@@ -30,6 +30,58 @@ graph TD
     D -->|No| F[Continue to next route - 404]
 ```
 
+### Hooks
+
+#### Change page slug
+
+```mermaid
+graph TD
+    A[Change page slug] -->|page.changeSlug:before| B
+    B{has Children or drafts}
+    B --> |Yes| C[Throw Error]
+    B --> |No| D[Proceed]
+    D -->|page.changeSlug:after| E
+    E{is draft}
+    E -->|Yes| F[Do nothing]
+    E -->|No| G{is multilang kirby}
+    F -->|Yes| H[Add localized redirect]
+    F -->|No| I[Add redirect]
+```
+
+#### Change page status
+
+```mermaid
+graph TD
+    A[Change page status] -->|page.changeStatus:after| B
+    B{new status == draft}
+    B --> |Yes| C[Delete all existing redirects to this page]
+    B --> |No| D[Do nothing]
+```
+
+#### Create page
+
+```mermaid
+graph TD
+    A[Create new page] -->|page.create:before| B
+    B{is Kirby multilang?}
+    B --> |No| C{Redirect to this URI exists?}
+    B --> |Yes| E{Redirect to this URI in default language exists?}
+    C --> |Yes| D{Destination page exists?}
+    E -->|Yes| D
+    E -->|No| G{Redirect to this URI in current language exists?}
+    G -->|Yes| D
+    G -->|No| H[Create page]
+    D --> |Yes| J[Throw error]
+    D --> |No| I[Delete redirect to that destination]
+    I --> H
+```
+
+#### Delete page
+
+```mermaid
+graph TD
+    A[Delete page] -->|page.delete:after| B[Delete all existing redirects to this page]
+```
 
 ### Configurable options
 
