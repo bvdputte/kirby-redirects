@@ -87,7 +87,7 @@ graph TD
     B --> |No| D[Proceed]
     D -->|page.changeSlug:after| E
     E{is draft}
-    E -->|Yes| F[Do nothing]
+    E -->|Yes| F[Proceed]
     E -->|No| G{is multilang kirby}
     G -->|Yes| H[Add localized autoredirect]
     G -->|No| I[Add autoredirect]
@@ -100,7 +100,7 @@ graph TD
     A[Change page status] -->|page.changeStatus:after| B
     B{new status == draft}
     B --> |Yes| C[Delete all existing autoredirect to this page]
-    B --> |No| D[Do nothing]
+    B --> |No| D[Proceed]
 ```
 
 #### Create page
