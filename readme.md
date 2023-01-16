@@ -2,6 +2,8 @@
 
 A Kirby 3 panel plugin to handle redirects in an opinionated way.
 
+⚠️ This plugin is currently a proof-of-concept, and probably not production ready yet ⚠️
+
 It exists out of 2 components:
 1. static redirects: this allows you to add redirects manually in a json file, as you'ld do via a .htaccess file. Usually this happens when taking over an existing site, or do large architectural changes. Happens usually by devs/specialists, and are matched via regex.
 2. auto redirects: this keeps track of slug changes that happen by editors via the panel. These can be visualised in the panel via the `redirects` field. With this field, editors can also delete generated autoredirects.
@@ -18,8 +20,7 @@ It exists out of 2 components:
 ## Installation
 
 - unzip [master.zip](https://github.com/bvdputte/kirby-redirects/archive/master.zip) as folder `site/plugins/kirby-redirects` or
-- `git submodule add https://github.com/bvdputte/kirby-redirects.git site/plugins/kirby-redirects` or
-- `composer require bvdputte/kirby-redirects`
+- `git submodule add https://github.com/bvdputte/kirby-redirects.git site/plugins/kirby-redirects`
 
 ⚠️ _You'll need at least Kirby 3.8 to use this plugin._
 
